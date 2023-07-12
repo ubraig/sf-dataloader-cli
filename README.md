@@ -56,7 +56,7 @@ Optionally
 - [Salesforce CLI](https://developer.salesforce.com/tools/sfdxcli) if you want to use the authentication methods provided by SFDX.
 
 ### Download and Install SfDataloaderCli PowerShell Module
-- Download the .zip file of the latest stable version from [Releases](./releases).
+- Download the .zip file of the latest stable version from [Releases](../../releases).
 - Extract the files to a target directory of your choice, e.g. `D:\sf-dataloader-cli-0.0.1-beta`
 - From the Data Loader .zip file (see prerequisites above), locate the Data Loader .jar file: e.g. in the `dataloader_v58.0.2.zip` this would be the file `dataloader_v58.0.2.jar`.
 - Copy this .jar file to the corresponding directory in the PowerShell module directory, e.g. to `D:\sf-dataloader-cli-0.0.1-beta\dataloader`
