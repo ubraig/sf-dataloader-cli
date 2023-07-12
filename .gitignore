@@ -1,0 +1,9 @@
+# the .jar ist to be installed on the target machine
+/dataloader/dataloader-58.0.1.jar
+
+# ignore local testing artifacts
+/.SfDataloaderCli
+/*.csv
+/*.txt
+/*.sdl
+/*.ps1
