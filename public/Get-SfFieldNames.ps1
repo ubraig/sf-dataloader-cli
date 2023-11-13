@@ -63,7 +63,7 @@ function Get-SfFieldNames{
         }
         'csv' {
             # get the first line = the line with the column names. Split at the comma and remove double quotes.
-            [string[]]$CsvColumns = (Get-Content -Path .\temp.csv -TotalCount 1) -split ',' -replace '"', ''
+            [string[]]$CsvColumns = (Get-Content -Path $Path -TotalCount 1) -split ',' -replace '"', ''
             foreach ($CsvColumn in $CsvColumns) {
                 if (!($CsvColumn.startswith('#'))) {
                     $Fields += $CsvColumn
