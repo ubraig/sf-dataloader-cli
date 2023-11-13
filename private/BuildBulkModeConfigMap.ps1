@@ -6,9 +6,11 @@ function BuildBulkModeConfigMap {
     )
 
     $ConfigOverrideMap = switch ($BulkMode) {
-        'Parallel' { @{ 'sfdc.useBulkApi' = 'true'; 'sfdc.bulkApiSerialMode' = 'false' } }
-        'Serial' { @{ 'sfdc.useBulkApi' = 'true'; 'sfdc.bulkApiSerialMode' = 'true' } }
-        Default { @{ 'sfdc.useBulkApi' = 'false' } }
+        'Parallel'           { @{ 'sfdc.useBulkApi' = 'true'; 'sfdc.bulkApiSerialMode' = 'false' } }
+        'ParallelHardDelete' { @{ 'sfdc.useBulkApi' = 'true'; 'sfdc.bulkApiSerialMode' = 'false' } }
+        'Serial'             { @{ 'sfdc.useBulkApi' = 'true'; 'sfdc.bulkApiSerialMode' = 'true' } }
+        'SerialHardDelete'   { @{ 'sfdc.useBulkApi' = 'true'; 'sfdc.bulkApiSerialMode' = 'true' } }
+        Default              { @{ 'sfdc.useBulkApi' = 'false' } }
     }
 
     return $ConfigOverrideMap
