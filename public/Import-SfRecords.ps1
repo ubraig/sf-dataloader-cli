@@ -26,22 +26,22 @@ function Import-SfRecords {
     [CmdletBinding(HelpURI="https://github.com/ubraig/sf-dataloader-cli/wiki")]
     param (
         # Hashmap as provided by Get-SfAuthToken command.
-        [Parameter(Mandatory, Position=0)]
+        [Parameter(Mandatory, Position = 0)]
         [hashtable]$SfAuthToken,
 
         # API name of the sObject/entity.
         [Parameter(Mandatory, Position = 1)]
         [string]$Object,
         
+        [Parameter(Mandatory, Position = 2)]
+        # API name of the field to be used as External ID field during UPSERT operation.
+        [string]$ExternalIdField,
+
         # Path and filename of the input .csv file. 
         # Needs to include the '.csv' extension.
         # If no file name is provided, it will look for the default name "<Object>.csv" in the current directory.
-        [Parameter(Position = 2)]
+        [Parameter(Position = 3)]
         [string]$Path = "$Object.csv",
-
-        [Parameter(Mandatory)]
-        # API name of the field to be used as External ID field during UPSERT operation.
-        [string]$ExternalIdField,
 
         # Path and filename of the '.sdl' mapping file. 
         # If empty, a default mapping file will be created on the fly based on the column names in the input .csv file.
