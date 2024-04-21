@@ -1,9 +1,8 @@
-﻿Set-StrictMode -Version 3
-
-function Import-SfRecords {
+﻿function Import-SfRecords {
 <# 
     .SYNOPSIS 
-    Invokes Salesforce Data Loader with an UPSERT operation to create/update records from a '.csv' file.
+    Invokes Salesforce Data Loader with an UPSERT operation to create/update records from a '.csv' or a '.xlsx' file.
+    NOTE: If any parameters related to Excel files are used, the PowerShell module 'ImportExcel' needs to be installed.
 
     .DESCRIPTION
     Reads records from a .csv file and UPSERTs those to the org that is represented by the AuthToken.
@@ -37,11 +36,16 @@ function Import-SfRecords {
         # API name of the field to be used as External ID field during UPSERT operation.
         [string]$ExternalIdField,
 
-        # Path and filename of the input .csv file. 
-        # Needs to include the '.csv' extension.
+        # Path and filename of the input file. 
+        # Needs to include either the '.csv' or the '.xlsx' extension.
         # If no file name is provided, it will look for the default name "<Object>.csv" in the current directory.
         [Parameter(Position = 3)]
         [string]$Path = "$Object.csv",
+
+        # Name of the worksheet in case an Excel file with '.xlsx' extension is given as in -Path parameter
+        # If an '.xlsx' file is given but -WorksheetName is empty, the first worksheet will be used.
+        [Parameter(Position=4)]
+        [string]$WorksheetName,
 
         # Path and filename of the '.sdl' mapping file. 
         # If empty, a default mapping file will be created on the fly based on the column names in the input .csv file.
@@ -58,8 +62,40 @@ function Import-SfRecords {
         # Default used for SOAP API: 200.
         # Default used for BULK API: 2000.
         [Parameter()]
-        [int32]$BatchSize = (&{ if ($bulk) { 2000 } else { 200 } })
+        [int32]$BatchSize = (&{ if ($bulk) { 2000 } else { 200 } }),
+
+        # Sets the value of 'sfdc.insertNulls' to 'false'. (Default of this package is 'true'.)
+        [Parameter()]
+        [switch]$NoInsertNulls,
+
+        # Convert the SUCCESS and ERROR files to Excel after processing, each in a separate Worksheet
+        [Parameter()]
+        [switch]$ConvertToExcel,
+
+        # Show the result files after finishing.
+        # If -ConvertToExcel is set, will open the resulting .xlsx file via Excel.
+        # If not, will pippe the .csv files to the screen wie Out-GridView
+        [Parameter()]
+        [switch]$Show
     )
+
+        function ExportCsv([string]$TargetPath, $CsvFileName, [string]$Name) {
+            $Parameters = @{
+                InputObject         = (Import-Csv $CsvFileName)
+                Path                = $TargetPath
+                ClearSheet          = $true
+                FreezeTopRow        = $true
+                AutoSize            = $true
+                NoNumberConversion  = '*'
+                TableStyle          = 'Medium2'
+                TableName           = $Name
+                WorksheetName       = $Name
+            }
+            Export-Excel @Parameters
+        }
+
+
+    Set-StrictMode -Version 3
 
     # -------------------------------------------------------------- some ugly magic to get the common parameter debug
     $debug = $false
@@ -84,13 +120,19 @@ function Import-SfRecords {
     $s = $item.FullName
     Write-Verbose "Created: <$s>"
 
+    # --------------------------------------- Prepare Source File
+    $Path = Resolve-Path $Path
+    if ($Path.EndsWith('.xlsx')) {
+        $Path = ConvertFrom-SfExcelWorksheet $Path $WorksheetName 
+    }
+    $SourceFile = Get-ChildItem $Path
+
     # --------------------------------------- Check for mapping file. If necessary, build a default mapping
     if (!$MappingFile) {
-        $MappingFile = ConvertTo-SfMappingFile (Get-SfFieldNames $Path) ($Path.Replace('.csv', '.sdl'))
+        $MappingFile = Join-Path $SourceFile.Directory "$($SourceFile.BaseName).sdl"
+        $MappingFile = ConvertTo-SfMappingFile (Get-SfFieldNames $Path) $MappingFile
     }
 
-    # --------------------------------------- Process parameters
-    $Path = Resolve-Path $Path
 
     # --------------------------------------- Build Config Override Map
     $ConfigOverrideMap = $SfAuthToken
@@ -100,6 +142,7 @@ function Import-SfRecords {
         'sfdc.loadBatchSize'    = $BatchSize
         'sfdc.entity'           = $Object
         'sfdc.externalIdField'  = $ExternalIdField
+        'sfdc.insertNulls'      = { if ($NoInsertNulls) { 'false' } else { 'true' } }
         'dataAccess.type'       = 'csvRead'
         'dataAccess.name'       = $Path
         'process.mappingFile'   = $MappingFile
@@ -127,10 +170,35 @@ function Import-SfRecords {
     )
     $s = InvokeSfDataloaderJavaClass -SystemPropertiesList $SystemPropertiesList -ClassName 'com.salesforce.dataloader.process.DataLoaderRunner' -ArgumentList $ArgumentList
 
-    return @{
+    $DataloaderResultFiles = @{
         SourceFile  = Resolve-Path $Path
         ErrorFile   = Resolve-Path $ConfigOverrideMap.'process.outputError'
         SuccessFile = Resolve-Path $ConfigOverrideMap.'process.outputSuccess'
         MappingFile = Resolve-Path $MappingFile
     }
+
+    if ($ConvertToExcel) {
+        $XlsResultsFileName = Join-Path $SourceFile.Directory "$($SourceFile.BaseName)-RESULTS.xlsx"
+        ExportCsv $XlsResultsFileName $DataloaderResultFiles.SourceFile   'SourceFile'
+        ExportCsv $XlsResultsFileName $DataloaderResultFiles.SuccessFile  'SuccessFile'
+        ExportCsv $XlsResultsFileName $DataloaderResultFiles.ErrorFile    'ErrorFile'
+        if ($Show) {
+            Invoke-Item $XlsResultsFileName
+        }
+    } else {
+        if ($Show) {
+            Import-Csv $DataloaderResultFiles.SourceFile  | Out-GridView -Title 'SourceFile'
+            Import-Csv $DataloaderResultFiles.SuccessFile | Out-GridView -Title 'SuccessFile'
+            Import-Csv $DataloaderResultFiles.ErrorFile   | Out-GridView -Title 'ErrorFile'
+        }
+    }
+
+    $DataloaderResultFiles = @{
+        SourceFile  = Resolve-Path $Path
+        ErrorFile   = Resolve-Path $ConfigOverrideMap.'process.outputError'
+        SuccessFile = Resolve-Path $ConfigOverrideMap.'process.outputSuccess'
+        MappingFile = Resolve-Path $MappingFile
+    }
+
+    return $DataloaderResultFiles
 }
