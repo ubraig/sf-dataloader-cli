@@ -73,9 +73,16 @@ function ConvertFrom-SfExcelWorksheet{
     # --- do it
     Import-Excel -Path $ExcelFile -WorksheetName $WorksheetName  | Export-Csv -Path $CsvFileName -Encoding UTF8 -NoTypeInformation
 
-    # --- remove BOM from file
-    $lines = Get-Content $CsvFileName
-    [IO.File]::WriteAllLines($CsvFileName, $lines)
+    # --- remove BOM from file (OLD)
+    #$lines = Get-Content $CsvFileName
+    #[IO.File]::WriteAllLines($CsvFileName, $lines)
+
+    # --- remove BOM from the resulting file (NEW)
+    # read but preserve (-Raw) the end-of-line character, i.e. return a single string (as apposed to a string array)
+    $Content = Get-Content $CsvFileName -Raw
+
+    # write without an additional EOL at the end (-NoNewLine)
+    Set-Content $CsvFileName $Content -Encoding utf8NoBOM -NoNewLine
 
     return $CsvFileName
 }
