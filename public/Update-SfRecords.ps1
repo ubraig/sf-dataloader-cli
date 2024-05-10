@@ -3,7 +3,7 @@
 function Update-SfRecords {
 <# 
     .SYNOPSIS 
-    Invokes Salesforce Data Loader with an UPDATE operation to create/update records from a '.csv' file.
+    Invokes Salesforce Data Loader with an UPDATE operation to create/update records from a '.csv' or a '.xlsx' file.
 
     .DESCRIPTION
     Reads records from a .csv file and UPDATEs those in the org that is represented by the AuthToken.
@@ -35,10 +35,15 @@ function Update-SfRecords {
         [string]$Object,
         
         # Path and filename of the input .csv file. 
-        # Needs to include the '.csv' extension.
+        # Needs to include either the '.csv' or the '.xlsx' extension.
         # If no file name is provided, it will look for the default name "<Object>.csv" in the current directory.
         [Parameter(Position = 2)]
         [string]$Path = "$Object.csv",
+
+        # Name of the worksheet in case an Excel file with '.xlsx' extension is given as in -Path parameter
+        # If an '.xlsx' file is given but -WorksheetName is empty, the first worksheet will be used.
+        [Parameter(Position=4)]
+        [string]$WorksheetName,
 
         # Path and filename of the '.sdl' mapping file. 
         # If empty, a default mapping file will be created on the fly based on the column names in the input .csv file.
@@ -96,13 +101,18 @@ function Update-SfRecords {
     $s = $item.FullName
     Write-Verbose "Created: <$s>"
 
+    # --------------------------------------- Prepare Source File
+    $Path = Resolve-Path $Path
+    if ($Path.EndsWith('.xlsx')) {
+        $Path = ConvertFrom-SfExcelWorksheet $Path $WorksheetName 
+    }
+    $SourceFile = Get-ChildItem $Path
+
     # --------------------------------------- Check for mapping file. If necessary, build a default mapping
     if (!$MappingFile) {
-        $MappingFile = ConvertTo-SfMappingFile (Get-SfFieldNames $Path) ($Path.Replace('.csv', '.sdl'))
+        $MappingFile = Join-Path $SourceFile.Directory "$($SourceFile.BaseName).sdl"
+        $MappingFile = ConvertTo-SfMappingFile (Get-SfFieldNames $Path) $MappingFile
     }
-
-    # --------------------------------------- Process parameters
-    $Path = Resolve-Path $Path
 
     # --------------------------------------- Build Config Override Map
     $ConfigOverrideMap = $SfAuthToken
