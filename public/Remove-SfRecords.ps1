@@ -3,7 +3,7 @@
 function Remove-SfRecords {
 <# 
     .SYNOPSIS 
-    Invokes Salesforce Data Loader with an DELETE or HARD_DELETE operation to delete records as given in a .csv file.
+    Invokes Salesforce Data Loader with an DELETE or HARD_DELETE operation to delete records as given in a '.csv' or '.xlsx' file.
 
     .LINK
     Get-SfAuthToken
@@ -23,10 +23,15 @@ function Remove-SfRecords {
         [string]$Object,
         
         # Path and filename of the input .csv file. 
-        # Needs to include the '.csv' extension.
+        # Needs to include either the '.csv' or the '.xlsx' extension.
         # If no file name is provided, it will look for the default name "<Object>.csv" in the current directory.
         [Parameter(Position = 2)]
         [string]$Path = "$Object.csv",
+
+        # Name of the worksheet in case an Excel file with '.xlsx' extension is given as in -Path parameter
+        # If an '.xlsx' file is given but -WorksheetName is empty, the first worksheet will be used.
+        [Parameter(Position=4)]
+        [string]$WorksheetName,
 
         # Path and filename of the '.sdl' mapping file. 
         # If empty, a default mapping file will be created on the fly based on the column names in the input .csv file.
@@ -45,7 +50,18 @@ function Remove-SfRecords {
         # Default used for SOAP API: 200.
         # Default used for BULK API: 2000.
         [Parameter()]
-        [int32]$BatchSize = (&{ if ($bulk) { 2000 } else { 200 } })
+        [int32]$BatchSize = (&{ if ($bulk) { 2000 } else { 200 } }),
+
+        # Convert the SUCCESS and ERROR files to Excel after processing, each in a separate Worksheet
+        [Parameter()]
+        [switch]$ConvertToExcel,
+
+        # Show the result files after finishing.
+        # If -ConvertToExcel is set, will open the resulting .xlsx file via Excel.
+        # If not, will pippe the .csv files to the screen wie Out-GridView
+        [Parameter()]
+        [switch]$Show
+
     )
 
     # -------------------------------------------------------------- some ugly magic to get the common parameter debug
@@ -71,13 +87,18 @@ function Remove-SfRecords {
     $s = $item.FullName
     Write-Verbose "Created: <$s>"
 
+    # --------------------------------------- Prepare Source File
+    $Path = Resolve-Path $Path
+    if ($Path.EndsWith('.xlsx')) {
+        $Path = ConvertFrom-SfExcelWorksheet $Path $WorksheetName 
+    }
+    $SourceFile = Get-ChildItem $Path
+
     # --------------------------------------- Check for mapping file. If necessary, build a default mapping
     if (!$MappingFile) {
-        $MappingFile = ConvertTo-SfMappingFile @('Id') ($Path.Replace('.csv', '.sdl'))
+        $MappingFile = Join-Path $SourceFile.Directory "$($SourceFile.BaseName).sdl"
+        $MappingFile = ConvertTo-SfMappingFile @('Id') $MappingFile
     }
-
-    # --------------------------------------- Process parameters
-    $Path = Resolve-Path $Path
 
     # --------------------------------------- Build Config Override Map
     $ConfigOverrideMap = $SfAuthToken
@@ -113,10 +134,25 @@ function Remove-SfRecords {
     )
     $s = InvokeSfDataloaderJavaClass -SystemPropertiesList $SystemPropertiesList -ClassName 'com.salesforce.dataloader.process.DataLoaderRunner' -ArgumentList $ArgumentList
 
-    return @{
+    # --- prepare return values
+    $DataloaderResultFiles = @{
         SourceFile  = Resolve-Path $Path
         ErrorFile   = Resolve-Path $ConfigOverrideMap.'process.outputError'
         SuccessFile = Resolve-Path $ConfigOverrideMap.'process.outputSuccess'
         MappingFile = Resolve-Path $MappingFile
     }
+
+    # --- how to present the result files?
+    if ($ConvertToExcel) {
+        $XlsResultsFileName = ConvertTo-SfResultsExcelWorkbook $DataloaderResultFiles
+        if ($Show) {
+            Invoke-Item $XlsResultsFileName
+        }
+    } else {
+        if ($Show) {
+            Out-SfResultsGridView $DataloaderResultFiles
+        }
+    }
+
+    return $DataloaderResultFiles
 }
