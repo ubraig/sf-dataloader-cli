@@ -79,22 +79,6 @@
         [switch]$Show
     )
 
-        function ExportCsv([string]$TargetPath, $CsvFileName, [string]$Name) {
-            $Parameters = @{
-                InputObject         = (Import-Csv $CsvFileName)
-                Path                = $TargetPath
-                ClearSheet          = $true
-                FreezeTopRow        = $true
-                AutoSize            = $true
-                NoNumberConversion  = '*'
-                TableStyle          = 'Medium2'
-                TableName           = $Name
-                WorksheetName       = $Name
-            }
-            Export-Excel @Parameters
-        }
-
-
     Set-StrictMode -Version 3
 
     # -------------------------------------------------------------- some ugly magic to get the common parameter debug
@@ -170,6 +154,7 @@
     )
     $s = InvokeSfDataloaderJavaClass -SystemPropertiesList $SystemPropertiesList -ClassName 'com.salesforce.dataloader.process.DataLoaderRunner' -ArgumentList $ArgumentList
 
+    # --- prepare return values
     $DataloaderResultFiles = @{
         SourceFile  = Resolve-Path $Path
         ErrorFile   = Resolve-Path $ConfigOverrideMap.'process.outputError'
@@ -177,27 +162,16 @@
         MappingFile = Resolve-Path $MappingFile
     }
 
+    # --- how to present the result files?
     if ($ConvertToExcel) {
-        $XlsResultsFileName = Join-Path $SourceFile.Directory "$($SourceFile.BaseName)-RESULTS.xlsx"
-        ExportCsv $XlsResultsFileName $DataloaderResultFiles.SourceFile   'SourceFile'
-        ExportCsv $XlsResultsFileName $DataloaderResultFiles.SuccessFile  'SuccessFile'
-        ExportCsv $XlsResultsFileName $DataloaderResultFiles.ErrorFile    'ErrorFile'
+        $XlsResultsFileName = ConvertTo-SfResultsExcelWorkbook $DataloaderResultFiles
         if ($Show) {
             Invoke-Item $XlsResultsFileName
         }
     } else {
         if ($Show) {
-            Import-Csv $DataloaderResultFiles.SourceFile  | Out-GridView -Title 'SourceFile'
-            Import-Csv $DataloaderResultFiles.SuccessFile | Out-GridView -Title 'SuccessFile'
-            Import-Csv $DataloaderResultFiles.ErrorFile   | Out-GridView -Title 'ErrorFile'
+            Out-SfResultsGridView $DataloaderResultFiles
         }
-    }
-
-    $DataloaderResultFiles = @{
-        SourceFile  = Resolve-Path $Path
-        ErrorFile   = Resolve-Path $ConfigOverrideMap.'process.outputError'
-        SuccessFile = Resolve-Path $ConfigOverrideMap.'process.outputSuccess'
-        MappingFile = Resolve-Path $MappingFile
     }
 
     return $DataloaderResultFiles
