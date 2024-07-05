@@ -66,15 +66,23 @@ function Update-SfRecords {
         [Parameter()]
         [switch]$NoInsertNulls,
 
-        # Convert the SUCCESS and ERROR files to Excel after processing, each in a separate Worksheet
+        # Shows the result files in the given format.
+        #   'Default'  : Open .csv with the default application for .csv files.
+        #   'Excel'    : Convert to .xlsx file and open with Excel.
+        #   'GridView' : Opens .csv result file with the Out-GridView command.
         [Parameter()]
-        [switch]$ConvertToExcel,
+        [ValidateSet('Default', 'GridView', 'Excel')]
+        [string]$ShowAs
 
-        # Show the result files after finishing.
-        # If -ConvertToExcel is set, will open the resulting .xlsx file via Excel.
-        # If not, will pippe the .csv files to the screen wie Out-GridView
-        [Parameter()]
-        [switch]$Show
+        # # Convert the SUCCESS and ERROR files to Excel after processing, each in a separate Worksheet
+        # [Parameter()]
+        # [switch]$ConvertToExcel,
+
+        # # Show the result files after finishing.
+        # # If -ConvertToExcel is set, will open the resulting .xlsx file via Excel.
+        # # If not, will pippe the .csv files to the screen wie Out-GridView
+        # [Parameter()]
+        # [switch]$Show
         
     )
 
@@ -157,16 +165,8 @@ function Update-SfRecords {
         MappingFile = Resolve-Path $MappingFile
     }
 
-    # --- how to present the result files?
-    if ($ConvertToExcel) {
-        $XlsResultsFileName = ConvertTo-SfResultsExcelWorkbook $DataloaderResultFiles
-        if ($Show) {
-            Invoke-Item $XlsResultsFileName
-        }
-    } else {
-        if ($Show) {
-            Out-SfResultsGridView $DataloaderResultFiles
-        }
+    if ($ShowAs) {
+        Show-SfResults $DataloaderResultFiles $ShowAs
     }
 
     return $DataloaderResultFiles

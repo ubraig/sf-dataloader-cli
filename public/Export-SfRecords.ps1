@@ -56,7 +56,16 @@ function Export-SfRecords{
         # Default used for SOAP API: 200.
         # Default used for BULK API: 2000.
         [Parameter()]
-        [int32]$BatchSize = (&{ if ($bulk) { 2000 } else { 200 } })
+        [int32]$BatchSize = (&{ if ($bulk) { 2000 } else { 200 } }),
+
+        # Shows the result files in the given format.
+        #   'Default'  : Open .csv with the default application for .csv files.
+        #   'Excel'    : Convert to .xlsx file and open with Excel.
+        #   'GridView' : Opens .csv result file with the Out-GridView command.
+        [Parameter()]
+        [ValidateSet('Default', 'GridView', 'Excel')]
+        [string]$ShowAs
+
     )
 
     # -------------------------------------------------------------- some ugly magic to get the common parameter debug
@@ -118,6 +127,11 @@ function Export-SfRecords{
         'run.mode=batch'
     )
     $s = InvokeSfDataloaderJavaClass -SystemPropertiesList $SystemPropertiesList -ClassName 'com.salesforce.dataloader.process.DataLoaderRunner' -ArgumentList $ArgumentList
+
+    if ($ShowAs) {
+        Show-SfResults $Path $ShowAs
+    }
+
 
     return $Path
 }

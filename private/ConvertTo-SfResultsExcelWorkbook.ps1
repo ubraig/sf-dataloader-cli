@@ -15,8 +15,16 @@ function ConvertTo-SfResultsExcelWorkbook{
     param(
         
         # Path/File name of the Excel workbook (.xlsx file)
+        #[Parameter(Mandatory)] 
+        #[hashtable]$DataloaderResultFiles
+
+        #
         [Parameter(Mandatory)] 
-        [hashtable]$DataloaderResultFiles
+        [string]$TargetPath,
+
+        # Ordered dictionary with Worksheet
+        [Parameter(Mandatory)] 
+        [System.Collections.Specialized.OrderedDictionary]$Worksheets
 
     )
 
@@ -50,13 +58,21 @@ function ConvertTo-SfResultsExcelWorkbook{
     Write-Debug "Debug-Mode: $debug"
 
     # --- do it
-    $SourceFile = Get-Item $DataloaderResultFiles.SourceFile
-    $XlsResultsFileName = Join-Path $SourceFile.Directory "$($SourceFile.BaseName)-RESULTS.xlsx"
+    # $SourceFile = Get-Item $DataloaderResultFiles.SourceFile
+    # $XlsResultsFileName = Join-Path $SourceFile.Directory "$($SourceFile.BaseName)-RESULTS.xlsx"
 
-    ExportCsv $XlsResultsFileName $DataloaderResultFiles.ErrorFile    'ErrorFile'
-    ExportCsv $XlsResultsFileName $DataloaderResultFiles.SuccessFile  'SuccessFile'
-    ExportCsv $XlsResultsFileName $DataloaderResultFiles.SourceFile   'SourceFile'
+    # ExportCsv $XlsResultsFileName $DataloaderResultFiles.ErrorFile    'ErrorFile'
+    # ExportCsv $XlsResultsFileName $DataloaderResultFiles.SuccessFile  'SuccessFile'
+    # ExportCsv $XlsResultsFileName $DataloaderResultFiles.SourceFile   'SourceFile'
 
-    return $XlsResultsFileName
+    if (Test-Path $TargetPath) {
+        Remove-Item $TargetPath
+    }
+
+    foreach ($w in $Worksheets.GetEnumerator()) {
+        ExportCsv $TargetPath $w.Value $w.Name
+    }
+
+    return $TargetPath
 }
 
