@@ -104,7 +104,7 @@ function Update-SfRecords {
     # --------------------------------------- Prepare Source File
     $Path = Resolve-Path $Path
     if ($Path.EndsWith('.xlsx')) {
-        $Path = ConvertFrom-SfExcelWorksheet $Path $WorksheetName 
+        $Path = ConvertFrom-SfExcelWorksheet $Path $WorksheetName -AppendWorksheetName
     }
     $SourceFile = Get-ChildItem $Path
 
