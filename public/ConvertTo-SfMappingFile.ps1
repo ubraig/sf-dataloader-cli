@@ -60,6 +60,6 @@ function ConvertTo-SfMappingFile {
         $MappingFileContent += "$Field=$TargetField"
     }
     Set-Content $Path $MappingFileContent
-    $Path = Resolve-Path $Path
+    $Path = (Resolve-Path $Path).Path
     return $Path
 }

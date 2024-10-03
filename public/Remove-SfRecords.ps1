@@ -96,7 +96,7 @@ function Remove-SfRecords {
     Write-Verbose "Created: <$s>"
 
     # --------------------------------------- Prepare Source File
-    $Path = Resolve-Path $Path
+    $Path = (Resolve-Path $Path).Path
     if ($Path.EndsWith('.xlsx')) {
         $Path = ConvertFrom-SfExcelWorksheet $Path $WorksheetName 
     }
@@ -144,10 +144,10 @@ function Remove-SfRecords {
 
     # --- prepare return values
     $DataloaderResultFiles = @{
-        SourceFile  = Resolve-Path $Path
-        ErrorFile   = Resolve-Path $ConfigOverrideMap.'process.outputError'
-        SuccessFile = Resolve-Path $ConfigOverrideMap.'process.outputSuccess'
-        MappingFile = Resolve-Path $MappingFile
+        SourceFile  = (Resolve-Path $Path).Path
+        ErrorFile   = (Resolve-Path $ConfigOverrideMap.'process.outputError').Path
+        SuccessFile = (Resolve-Path $ConfigOverrideMap.'process.outputSuccess').Path
+        MappingFile = (Resolve-Path $MappingFile).Path
     }
 
     if ($ShowAs) {

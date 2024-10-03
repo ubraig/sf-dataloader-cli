@@ -82,7 +82,7 @@ function Export-SfRecords{
     $ProcessName = "$($MyInvocation.MyCommand.Name)-$Object"
     $ConfigTempDir = InitializeConfigTempDir
     Set-Content $Path ''
-    $Path = Resolve-Path $Path
+    $Path = (Resolve-Path $Path).Path
 
     # --------------------------------------- Prepare log-conf.xml
     $s = BuildDataloaderLogConfXml $ConfigTempDir "$ConfigTempDir/$ProcessName"
